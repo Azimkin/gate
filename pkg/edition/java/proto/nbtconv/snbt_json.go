@@ -191,7 +191,7 @@ func SnbtToJSON(snbt string) (json.RawMessage, error) {
 	if err := yaml.Unmarshal([]byte(snbt), &m); err != nil {
 		return nil, fmt.Errorf("error unmarshalling snbt to yaml: %w", err)
 	}
-	normalizeComponentStyleBooleans(m)
+	NormalizeComponentStyleBooleans(m)
 	// Marshal back to JSON
 	j, err := json.Marshal(m)
 	if err != nil {
@@ -208,7 +208,9 @@ var componentStyleBooleanKeys = map[string]struct{}{
 	"obfuscated":    {},
 }
 
-func normalizeComponentStyleBooleans(v any) {
+// NormalizeComponentStyleBooleans normalizes Minecraft chat component style
+// boolean fields that may be encoded as NBT byte-like values.
+func NormalizeComponentStyleBooleans(v any) {
 	switch v := v.(type) {
 	case map[string]any:
 		for k, child := range v {
@@ -218,13 +220,38 @@ func normalizeComponentStyleBooleans(v any) {
 					continue
 				}
 			}
-			normalizeComponentStyleBooleans(child)
+			NormalizeComponentStyleBooleans(child)
 		}
 	case []any:
 		for _, child := range v {
-			normalizeComponentStyleBooleans(child)
+			NormalizeComponentStyleBooleans(child)
 		}
 	}
+}
+
+// NormalizeComponentStyleBooleansJSON normalizes style booleans in a JSON chat
+// component. It returns the original JSON unchanged when none of the relevant
+// keys are present.
+func NormalizeComponentStyleBooleansJSON(j json.RawMessage) (json.RawMessage, error) {
+	if !mayContainComponentStyleBoolean(j) {
+		return j, nil
+	}
+
+	var v any
+	if err := json.Unmarshal(j, &v); err != nil {
+		return nil, err
+	}
+	NormalizeComponentStyleBooleans(v)
+	return json.Marshal(v)
+}
+
+func mayContainComponentStyleBoolean(j json.RawMessage) bool {
+	for key := range componentStyleBooleanKeys {
+		if bytes.Contains(j, []byte(`"`+key+`"`)) {
+			return true
+		}
+	}
+	return false
 }
 
 func nbtByteBool(v any) (bool, bool) {

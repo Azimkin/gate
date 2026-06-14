@@ -380,3 +380,26 @@ func TestSnbtToJSON_ComponentStyleByteBooleans(t *testing.T) {
 		}]
 	}`, string(got))
 }
+
+func TestNormalizeComponentStyleBooleansJSON(t *testing.T) {
+	got, err := NormalizeComponentStyleBooleansJSON(json.RawMessage(`{
+		"text": "hi",
+		"obfuscated": "0B",
+		"extra": [{
+			"text": " child",
+			"strikethrough": "1B"
+		}]
+	}`))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.JSONEq(t, `{
+		"text": "hi",
+		"obfuscated": false,
+		"extra": [{
+			"text": " child",
+			"strikethrough": true
+		}]
+	}`, string(got))
+}

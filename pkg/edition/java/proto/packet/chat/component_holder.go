@@ -100,6 +100,10 @@ func (c *ComponentHolder) AsComponent() (component.Component, error) {
 		return c.Component, nil
 	case len(c.JSON) != 0:
 		var err error
+		c.JSON, err = nbtconv.NormalizeComponentStyleBooleansJSON(c.JSON)
+		if err != nil {
+			return nil, fmt.Errorf("error while normalizing component style booleans: %w", err)
+		}
 		c.Component, err = util.JsonCodec(c.Protocol).Unmarshal(c.JSON)
 		return c.Component, err
 	case len(c.BinaryTag.Data) != 0:
@@ -118,7 +122,9 @@ func (c *ComponentHolder) AsComponent() (component.Component, error) {
 // AsJson returns the component as a JSON raw message.
 func (c *ComponentHolder) AsJson() (json.RawMessage, error) {
 	if len(c.JSON) != 0 {
-		return c.JSON, nil
+		var err error
+		c.JSON, err = nbtconv.NormalizeComponentStyleBooleansJSON(c.JSON)
+		return c.JSON, err
 	}
 	if len(c.BinaryTag.Data) != 0 {
 		var err error
